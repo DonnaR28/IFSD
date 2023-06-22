@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+
+  <style>
+    ul {
+      padding: 0;
+    }
+
+    li {
+      width: 200px;
+      margin: 10px 0;
+      list-style: none;
+    }
+
+  </style>
+
+  <script type="text/babel">
+    class CompoundFractionSum extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          fractions: [],
+          sum: {
+            wholeNumber: 0,
+            numerator: 0,
+            denominator: 1,
+          },
+          wholeNumber: '',
+          numerator: '',
+          denominator: '',
+          editFractionId: null,
+        };
+        this.addFraction = this.addFraction.bind(this);
+        this.calculateSum = this.calculateSum.bind(this);
+        this.handleWholeNumberChange = this.handleWholeNumberChange.bind(this);
+        this.handleNumeratorChange = this.handleNumeratorChange.bind(this);
+        this.handleDenominatorChange = this.handleDenominatorChange.bind(this);
+        this.deleteFraction = this.deleteFraction.bind(this);
+        this.editFraction = this.editFraction.bind(this);
+        this.updateFraction = this.updateFraction.bind(this);
+      }
+
+      addFraction() {
+        const { wholeNumber, numerator, denominator } = this.state;
+        if (numerator && denominator) {
+          const fraction = {
+            id: Date.now(),
+            wholeNumber: parseInt(wholeNumber),
+            numerator: parseInt(numerator),
+            denominator: parseInt(denominator),
+          };
+          this.setState(
+            (prevState) => ({
+              fractions: [...prevState.fractions, fraction],
+              wholeNumber: '',
+              numerator: '',
+              denominator: '',
+            }),
+            () => {
+              this.calculateSum();
+            }
+          );
+        }
+      }
+
+      calculateSum() {
+        fetch('/sum')
+          .then((response) => response.json())
+          .then((sum) => {
+            this.setState({ sum });
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      }
+
+      handleWholeNumberChange(event) {
+        this.setState({ wholeNumber: event.target.value });
+      }
+
+      handleNumeratorChange(event) {
+        this.setState({ numerator: event.target.value });
+      }
+
+      handleDenominatorChange(event) {
+        this.setState({ denominator: event.target.value });
+      }
+
+      deleteFraction(id) {
+        this.setState(
+          (prevState) => ({
+            fractions: prevState.fractions.filter((fraction) => fraction.id !== id),
+          }),
+          () => {
+            this.calculateSum();
+          }
+        );
+      }
+
+      editFraction(id) {
+        const fraction = this.state.fractions.find((fraction) => fraction.id === id);
+        if (fraction) {
+          this.setState({
+            wholeNumber: fraction.wholeNumber.toString(),
+            numerator: fraction.numerator.toString(),
+            denominator: fraction.denominator.toString(),
+            editFractionId: id,
+          });
+        }
+      }
+
+      updateFraction() {
+        const { wholeNumber, numerator, denominator, editFractionId } = this.state;
+        if (numerator && denominator && editFractionId !== null) {
+          const updatedFractions = this.state.fractions.map((fraction) => {
+            if (fraction.id === editFractionId) {
+              return {
+                ...fraction,
+                wholeNumber: parseInt(wholeNumber),
+                numerator: parseInt(numerator),
+                denominator: parseInt(denominator),
+              };
+            }
+            return fraction;
+          });
+          this.setState(
+            {
+              fractions: updatedFractions,
+              wholeNumber: '',
+              numerator: '',
+              denominator: '',
+              editFractionId: null,
+            },
+            () => {
+              this.calculateSum();
+            }
+          );
+        }
+      }
+
+      render() {
+        return (
+          <div>
+            <h1>Compound Fraction Sum</h1>
+            <ul>
+              {this.state.fractions.map((fraction) => (
+                <li key={fraction.id} className={fraction.id === this.state.editFractionId ? 'editing' : ''}>
+                  {fraction.wholeNumber !== 0 && (
+                    <span>{fraction.wholeNumber} </span>
+                  )}
+                  {fraction.numerator}/{fraction.denominator}
+                  <button onClick={() => this.deleteFraction(fraction.id)}>
+                    Delete
+                  </button>
+                  <button onClick={() => this.editFraction(fraction.id)}>
+                    Edit
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div>
+              <input
+                type="number"
+                placeholder="Whole Number"
+                value={this.state.wholeNumber}
+                onChange={this.handleWholeNumberChange}
+              />
+              <input
+                type="number"
+                placeholder="Numerator"
+                value={this.state.numerator}
+                onChange={this.handleNumeratorChange}
+              />
+              <input
+                type="number"
+                placeholder="Denominator"
+                value={this.state.denominator}
+                onChange={this.handleDenominatorChange}
+              />
+              {this.state.editFractionId !== null ? (
+                <button onClick={this.updateFraction}>Update Fraction</button>
+              ) : (
+                <button onClick={this.addFraction}>Add Fraction</button>
+              )}
+            </div>
+
+            <button onClick={this.calculateSum}>Calculate Sum</button>
+            <p>
+              Sum: {this.state.sum.wholeNumber !== 0 && (
+                <span>{this.state.sum.wholeNumber} </span>
+              )}
+              {this.state.sum.numerator}/{this.state.sum.denominator}
+            </p>
+          </div>
+        );
+      }
+    }
+
+    function load() {
+      let rootElement = document.getElementById('root');
+      ReactDOM.render(<CompoundFractionSum />, rootElement);
+    }
+  </script>
+</head>
+
+<body onload="load();">
+  <div id="root"></div>
+  <script src="./server.js" type="text/babel"></script>
+</body>
+
+</html>
